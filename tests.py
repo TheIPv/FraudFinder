@@ -30,49 +30,87 @@ class Tests:
         self.first_real = None
 
     def test_coherence_data(self):
-        df = self.df
+        df = self.df.copy().reset_index(drop=False).rename(columns={'index': 'Номер строки'})
+        df['Номер строки'] = df['Номер строки'] + 2
+
         names = '000, 001, 002, 003, 003.01, 003.02, 004, 004.1, 004.02, 004.К, 005, 006, 007, 008, 008.1, 008.21, 009, 009.01, 009.21, 010, 011, 012, 012.01, 012.02, ГТД, КВ, МЦ, МЦ.02, МЦ.03, МЦ.04, НЕ, НЕ.01, НЕ.01.1, НЕ.01.9, НЕ.02, НЕ.02.1, НЕ.02.9, НЕ.03, НЕ.04, ОТ, ОТ.01, ОТ.02, ОТ.03, РВ, РВ.1, РВ.2, РВ.3, РВ.4, УСН, УСН.01, УСН.01, УСН.02, УСН.03, УСН.04, УСН.21, УСН.22, УСН.23, УСН.24, Я75, Я81.01, Я81, Я80, Я80.02, Я80.01, Я80.09, Я75.01, Я81.09, Я81.02, Я75.02, Я69.06.5, Я01.К, Я96, Я96.01'
         namesofaccs = [accs.strip() for accs in names.split(',')]
+
+        # Фильтруем строки с отсутствующими или некорректными значениями в столбцах 'СчетДт' и 'СчетКт'
         result = df[df['СчетДт'].isnull() | df['СчетКт'].isnull()]
         result = result.loc[~result['СчетКт'].isin(namesofaccs) & ~result['СчетДт'].isin(namesofaccs)]
 
-        if result.shape[0] == 0:
-            print("Проверка целостности данных успешно завершена")
+        # Проверяем результат и формируем вывод
+        if result.empty:
+            return pd.DataFrame([["Проверка целостности данных пройдена"]], columns=["Результат"]), True
         else:
-            print("Проверка целостности данных выполнена с ошибками")
+            result = result[['Номер строки', 'СчетДт', 'СчетКт']]
+            error_header = pd.DataFrame([["Есть ошибки в следующих строках:"]], columns=["Результат"])
+            result_with_header = pd.concat([error_header, result], ignore_index=True)
+            return result_with_header, False
 
     def test_math_correctly(self):
-        resultosv = self.OSV.loc[(self.OSV['Сальдо начальное Дт'].fillna(0) - self.OSV['Сальдо начальное Кт'].fillna(0) +
-                             self.OSV['Обороты Дт'].fillna(0) - self.OSV['Обороты Кт'].fillna(0) -
-                             self.OSV['Сальдо конечное Дт'].fillna(0) + self.OSV['Сальдо конечное Кт'].fillna(0)).abs() > 0.9]
+        OSV = self.OSV.copy()
+        OSV['Номер строки'] = range(1, len(OSV) + 1)
+        OSV['Номер строки'] = OSV['Номер строки'] + 1
 
-        if resultosv.shape[0] == 0:
-            print("Проверка математической правильности успешно завершена")
+        # Вычисление разницы для проверки условия и отбор строк с ошибками
+        resultosv = OSV.loc[(OSV['Сальдо начальное Дт'].fillna(0) - OSV['Сальдо начальное Кт'].fillna(0) +
+                             OSV['Обороты Дт'].fillna(0) - OSV['Обороты Кт'].fillna(0) -
+                             OSV['Сальдо конечное Дт'].fillna(0) + OSV['Сальдо конечное Кт'].fillna(0)).abs() > 0.9]
+
+        # Формируем результат в зависимости от наличия ошибок
+        if resultosv.empty:
+            return pd.DataFrame([["Проверка математической правильности успешно завершена"]], columns=["Результат"]), True
         else:
-            print("Проверка математической правильности выполнена с ошибками")
+            resultosv = resultosv.reset_index(drop=True)
+            resultosv['Результат'] = "Ошибка в строке"
+            return resultosv[['Номер строки', 'Сальдо начальное Дт', 'Сальдо начальное Кт', 'Обороты Дт',
+                              'Обороты Кт', 'Сальдо конечное Дт', 'Сальдо конечное Кт', 'Результат']], False
 
+    # Функция проверки полноты выгрузки
     def test_unloading_completeness(self):
-        df = self.df
-        # Тест полноты выгрузки
-        journal_sum = df[['СчетДт', 'СчетКт', 'Сумма']].fillna(0)
+        # Добавляем поле Номер строки в основной DataFrame и OSV
+        df = self.df.copy().reset_index(drop=False).rename(columns={'index': 'Номер строки'})
+        OSV = self.OSV.copy()
+        OSV['Номер строки'] = range(1, len(OSV) + 1)
+        OSV['Номер строки'] = OSV['Номер строки'] + 1
+
+        journal_sum = df[['Номер строки', 'СчетДт', 'СчетКт', 'Сумма']].fillna(0)
         journal_sum_dt = journal_sum.groupby(['СчетДт'], as_index=False)['Сумма'].sum()
+        journal_sum_dt['Количество Счет Дт'] = journal_sum.groupby(['СчетДт'])['СчетДт'].count()
         journal_sum_kt = journal_sum.groupby(['СчетКт'], as_index=False)['Сумма'].sum()
+        journal_sum_kt['Количество Счет Кт'] = journal_sum.groupby(['СчетКт'])['СчетКт'].count()
         journal_sum_kt = journal_sum_kt.rename(columns={'Сумма': 'Обороты Кт по выгрузке'})
-        journal_sum_dt = journal_sum_dt.rename(columns={'Сумма': 'Обороты Дт по выгрузке'}).set_index('СчетДт')
+        journal_sum_dt = journal_sum_dt.rename(columns={'Сумма': 'Обороты Дт по выгрузке'})
+        journal_sum_dt = journal_sum_dt.set_index('СчетДт')
         journal_sum_kt = journal_sum_kt.set_index('СчетКт')
-        osvjournal = pd.concat([self.OSV, journal_sum_kt.reindex(self.OSV.index)], axis=1)
-        osvjournal = pd.concat([osvjournal, journal_sum_dt.reindex(self.OSV.index)], axis=1)
+
+        osvjournal = pd.concat([OSV, journal_sum_kt.reindex(OSV.index)], axis=1)
+        osvjournal = pd.concat([osvjournal, journal_sum_dt.reindex(OSV.index)], axis=1)
+        osvjournal['Обороты Дт'] = osvjournal['Обороты Дт'].fillna(0)
+        osvjournal['Обороты Кт'] = osvjournal['Обороты Кт'].fillna(0)
+        osvjournal['Обороты Дт по выгрузке'] = osvjournal['Обороты Дт по выгрузке'].fillna(0)
+        osvjournal['Обороты Кт по выгрузке'] = osvjournal['Обороты Кт по выгрузке'].fillna(0)
+
+        # Рассчитываем разницу по оборотам
         osvjournal['Обороты Дт разница'] = osvjournal['Обороты Дт'].round(2) - osvjournal[
             'Обороты Дт по выгрузке'].round(2)
         osvjournal['Обороты Кт разница'] = osvjournal['Обороты Кт'].round(2) - osvjournal[
             'Обороты Кт по выгрузке'].round(2)
-        osvresult = osvjournal.loc[
-            (osvjournal['Обороты Дт разница'] != 0) | (osvjournal['Обороты Кт разница'] != 0)]
+
+        # Фильтруем строки с разницей
+        osvresult = osvjournal.loc[(osvjournal['Обороты Дт разница'] != 0) | (osvjournal['Обороты Кт разница'] != 0)]
+        osvresult = osvresult.rename(columns={'Обороты Дт': 'Обороты Дт по ОСВ', 'Обороты Кт': 'Обороты Кт по ОСВ'})
+
+        result = osvresult[
+            ["Номер строки", "Обороты Дт по ОСВ", "Обороты Кт по ОСВ", "Обороты Дт по выгрузке",
+             "Обороты Кт по выгрузке", "Обороты Дт разница", "Обороты Кт разница"]]
 
         if len(osvresult) != 0:
-            print("Проверка полноты выгрузки выполнена с ошибками")
+            return pd.DataFrame(result), False
         else:
-            print("Проверка полноты выгрузки успешно завершена")
+            return pd.DataFrame([["Проверка полноты выгрузки успешно завершена"]], columns=["Результат"]), True
 
     def benford_check(self):
         self.benf.summation()

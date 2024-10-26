@@ -1,3 +1,5 @@
+import pandas as pd
+
 from tests import Tests
 from excel_writer import ExcelWriter
 import matplotlib
@@ -29,21 +31,36 @@ class TestManager:
         """
         Запускает все тесты и записывает результаты в Excel.
         """
-        # Выполнение тестов
         self.log("Запуск тестов согласованности данных...")
-        self.tests.test_coherence_data()
+        self.excel_writer.save_data_to_excel(pd.DataFrame(), 'Тесты целостности')
+        correct_data = True
+
+        # Выполнение тестов
+        consistency_result, is_success = self.tests.test_coherence_data()
+        self.excel_writer.save_data_to_excel(consistency_result, 'Тест 1.1')
+        if not is_success:
+            correct_data = False
 
         self.log("Запуск тестов математической корректности...")
-        self.tests.test_math_correctly()
+        math_correct, is_success = self.tests.test_math_correctly()
+        self.excel_writer.save_data_to_excel(math_correct, 'Тест 1.2')
+        if not is_success:
+            correct_data = False
 
         self.log("Запуск тестов полноты выгрузки...")
-        self.tests.test_unloading_completeness()
+        unloading_complete, is_success = self.tests.test_unloading_completeness()
+        self.excel_writer.save_data_to_excel(unloading_complete, 'Тест 1.3')
+        if not is_success:
+            correct_data = False
+
+        if correct_data is False:
+            raise Exception('файлы с данными некорректны. Подробная информация в Excel отчете')
 
         self.log("Запуск теста Бенфорда...")
         benford_result = self.tests.benford_check()
         self.excel_writer.save_data_to_excel(benford_result, 'Тест Бенфорда')
 
-        self.log("Запуск теста первой, второй и первой и второйz цифры")
+        self.log("Запуск теста первой, второй и первой и второй цифры")
         digit_results = self.tests.test_digits()
         for name, df in digit_results.items():
             plot_file = f'{name}_plot.png'
