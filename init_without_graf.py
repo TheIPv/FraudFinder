@@ -16,4 +16,3 @@ def log(message):
 
 manager = TestManager(df, OSV, output_folder, excel_filename, log)
 manager.run_tests()
-

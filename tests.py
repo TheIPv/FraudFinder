@@ -1,6 +1,5 @@
 import math
 import tkinter as tk
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,8 +15,8 @@ import pandas as pd
 import re
 import os
 
-class Tests:
 
+class Tests:
     df = None
     OSV = None
 
@@ -28,6 +27,8 @@ class Tests:
         self.first_teor = None
         self.df_duplicates = None
         self.first_real = None
+        self.test_results = {}
+        self.images = {}
 
     def test_coherence_data(self):
         df = self.df.copy().reset_index(drop=False).rename(columns={'index': 'Номер строки'})
@@ -61,7 +62,8 @@ class Tests:
 
         # Формируем результат в зависимости от наличия ошибок
         if resultosv.empty:
-            return pd.DataFrame([["Проверка математической правильности успешно завершена"]], columns=["Результат"]), True
+            return pd.DataFrame([["Проверка математической правильности успешно завершена"]],
+                                columns=["Результат"]), True
         else:
             resultosv = resultosv.reset_index(drop=True)
             resultosv['Результат'] = "Ошибка в строке"
@@ -125,10 +127,10 @@ class Tests:
             f"'L2D': {self.benf._discarded['L2D']};"
         )
 
-
         # Формируем DataFrame с нужными данными
         df = pd.DataFrame({
-            'Параметр': ['Исходный размер выборки', 'Количество значений, на которых проведен тест', 'Исключенные значения'],
+            'Параметр': ['Исходный размер выборки', 'Количество значений, на которых проведен тест',
+                         'Исключенные значения'],
             'Значение': [initial_size, tested_sample_size, data]
         })
 
@@ -178,7 +180,7 @@ class Tests:
         sys.stdout = report_output
 
         # Выполняем команду, которая выводит результаты и сохраняет график
-        image_path = 'plot.png'
+        image_path = 'plot_F2D.png'
         self.benf.F2D_sec.report(save_plot=image_path)
 
         # Возвращаем стандартный вывод обратно
@@ -342,15 +344,3 @@ class Tests:
         df_output = pd.DataFrame(data)
 
         return df_output
-
-
-
-
-
-
-
-
-
-
-
-

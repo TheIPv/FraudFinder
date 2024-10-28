@@ -5,12 +5,13 @@ import threading
 from tkinter import filedialog, messagebox
 import pandas as pd
 import matplotlib
-matplotlib.use('Agg')  # Отключает отображение графиков на экране
 
+matplotlib.use('Agg')  # Отключает отображение графиков на экране
 
 # Глобальные переменные для хранения загруженных данных
 df = None
 OSV = None
+
 
 # Функция для создания уникальной папки на рабочем столе
 def create_output_folder():
@@ -20,10 +21,12 @@ def create_output_folder():
     os.makedirs(folder_path)
     return folder_path
 
+
 # Функция для обновления лога
 def update_log(message):
     log_label.config(text=message)
     window.update_idletasks()
+
 
 # Функция для загрузки файла
 def load_file(file_type):
@@ -43,10 +46,12 @@ def load_file(file_type):
     update_log(f"Файл {file_type} загружен")
     return file_path
 
+
 # Функция для загрузки первого файла
 def load_first_file():
     load_file("ЖО")
     load_osv_button.config(state=tk.NORMAL)
+
 
 # Функция для загрузки второго файла
 def load_second_file():
@@ -56,10 +61,14 @@ def load_second_file():
         update_log("Файлы загружены. Готово к анализу.")
         start_analysis_button.pack(pady=10)
 
+
 def analyze_data_thread():
     analyze_data()
+
+
 def start_analysis():
     threading.Thread(target=analyze_data_thread).start()
+
 
 # Функция для анализа данных
 def analyze_data():
@@ -196,7 +205,7 @@ def analyze_data():
     plt.title('Тест дублирования сумм')
     plt.xticks(bar_positions, sorted_counts.index, rotation=45)  # Вращаем подписи для лучшей читаемости
     plt.tight_layout()  # Оптимально размещаем элементы на графике
-    #plt.show()
+    # plt.show()
 
     """### **2.3.2 Тест двух последних цифр**"""
 
@@ -669,7 +678,8 @@ def analyze_data():
     df_output = pd.DataFrame(data)
 
     # Запись в файл Excel с настройками
-    with pd.ExcelWriter(os.path.join(output_folder, 'Оценка коэффициента искажения.xlsx'), engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(os.path.join(output_folder, 'Оценка коэффициента искажения.xlsx'),
+                        engine='xlsxwriter') as writer:
         df_output.to_excel(writer, sheet_name='Анализ искажения', index=False, startrow=1)
 
         # Доступ к workbook и worksheet
@@ -715,6 +725,8 @@ def analyze_data():
         ascending=False)
 
     df.loc[:, 'first'] = df['Сумма'].apply(lambda x: int(str(x)[0]))
+    print("DKDKDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+    print(df.groupby('first')['Сумма'].count())
 
     # Список, содержащий частоты появления первых цифр в выборке
 
@@ -814,7 +826,7 @@ def analyze_data():
     ind = df_cur.index
     df.loc[ind, "z_stat_second_diff"] = df_cur["z_stat_second_diff"]
 
-    #TODO отсюда продолжить перенос
+    # TODO отсюда продолжить перенос
     # Z-Тест последних двух цифр
 
     df_cur = df
@@ -971,10 +983,11 @@ def analyze_data():
         # Автовыравнивание ширины столбцов A и B
         worksheet_silhouette.set_column(0, 0, max([len(str(n)) for n in x] + [len('Количество кластеров')]))
         worksheet_silhouette.set_column(1, 1, max([len(f'{s:.3f}') for s in m] + [len('Silhouette Score')]))
-
     # Удаляем временные файлы изображений, если они существуют
     if os.path.exists(image_path):
         os.remove(image_path)
+
+    # TODO
 
     print(f"График силуэта и результаты анализа успешно сохранены в '{excel_file}'.")
 
@@ -989,6 +1002,9 @@ def analyze_data():
 
     grouped_count = scaled_df.groupby("Class").count()["z-stat first"]
     print(grouped_count)
+
+    print("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+    print(temp)
 
     temp["Class"] = scaled_df["Class"]
 
@@ -1012,45 +1028,6 @@ def analyze_data():
     # Добавляем лист с результатами в существующий файл z_stats_report.xlsx
     sheet_name = 'Статистики'
     excel_file = os.path.join(output_folder, 'Z-статистики.xlsx')
-    with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
-        # Создаем новый лист "Статистики"
-        worksheet_z_stats = writer.book.add_worksheet(sheet_name)
-
-        # Вставляем таблицу grouped_count в Excel
-        worksheet_z_stats.write(0, 0, 'Класс')
-        worksheet_z_stats.write(0, 1, 'Число объектов')
-
-        # Записываем данные таблицы grouped_count
-        row_num = 1
-        for class_label, count in grouped_count.items():
-            worksheet_z_stats.write(row_num, 0, class_label)
-            worksheet_z_stats.write(row_num, 1, count)
-            row_num += 1
-
-        # Вставляем таблицу mean_temp (начиная с того же row_num)
-        worksheet_z_stats.write(row_num, 0, 'Средние значения')
-        row_num += 1
-
-        # Записываем средние значения из таблицы mean_temp
-        for col_num, col_name in enumerate(mean_temp.columns):
-            worksheet_z_stats.write(row_num, col_num + 1, col_name)  # Заголовки столбцов
-        row_num += 1
-
-        for class_label, row in mean_temp.iterrows():
-            worksheet_z_stats.write(row_num, 0, class_label)  # Записываем номер класса
-            for col_num, value in enumerate(row):
-                worksheet_z_stats.write(row_num, col_num + 1, value)  # Записываем значения
-            row_num += 1
-
-        # Вставляем график в Excel (в ячейку D1)
-        worksheet_z_stats.insert_image('A8', image_path_z_stats, {'x_scale': 0.4, 'y_scale': 0.4})
-        # Устанавливаем автоподбор ширины для столбцов
-        worksheet_z_stats.set_column(0, 0, 15)  # Ширина для столбца 'Класс'
-        worksheet_z_stats.set_column(1, 1, 20)  # Ширина для столбца 'Число объектов'
-
-        # Устанавливаем ширину для столбцов таблицы mean_temp
-        for col_num in range(len(mean_temp.columns)):
-            worksheet_z_stats.set_column(col_num + 1, col_num + 1, 20)  # Ширина для средних значений
 
     # Удаляем временные файлы изображений, если они существуют
     if os.path.exists(image_path_z_stats):
@@ -1323,7 +1300,8 @@ def analyze_data():
     anomaly_original_rows.head(10)
 
     # вывод всех аномальных строк изначального документа
-    anomaly_original_rows.to_excel(os.path.join(output_folder, 'Список подозрительных операций (этап 1).xlsx'), index=False)
+    anomaly_original_rows.to_excel(os.path.join(output_folder, 'Список подозрительных операций (этап 1).xlsx'),
+                                   index=False)
 
     cluster_1_index = list(scaled_df[scaled_df["Class"] == anomaly_class_el].index)
 
@@ -1611,9 +1589,11 @@ def analyze_data():
     # Показать кнопку "Провести новый анализ"
     restart_button.pack(side=tk.LEFT, padx=10, pady=10)
 
+
 # Функция для выхода из программы
 def exit_program():
     window.quit()
+
 
 # Функция для перезапуска окна приложения
 def restart_program():
@@ -1624,6 +1604,7 @@ def restart_program():
 import os
 import tkinter as tk
 from tkinter import font as tkfont
+
 
 def create_main_window():
     global window, log_label, load_osv_button, start_analysis_button, start_button, restart_button, risk_entry, company_entry
@@ -1659,7 +1640,8 @@ def create_main_window():
     vcmd = (window.register(validate_numeric_input), '%P')
 
     # Поле ввода для "Ожидаемый риск мошенничества"
-    risk_label = tk.Label(window, text="Ожидаемый риск мошенничества", anchor="w", bg="#f0f4fc", fg="#276fbf", font=custom_font)
+    risk_label = tk.Label(window, text="Ожидаемый риск мошенничества", anchor="w", bg="#f0f4fc", fg="#276fbf",
+                          font=custom_font)
     risk_label.pack(pady=5, padx=10, fill="x")
     risk_entry = tk.Entry(window, validate="key", validatecommand=vcmd, font=custom_font, relief="flat", bg="#d4e5fa")
     risk_entry.insert(0, "0.1")  # Устанавливаем дефолтное значение
@@ -1696,7 +1678,8 @@ def create_main_window():
     start_analysis_button.pack_forget()
 
     # Лог для отображения текущих действий
-    log_label = tk.Label(window, text="Лог действий будет здесь", anchor="w", bg="#f0f4fc", fg="#276fbf", font=custom_font)
+    log_label = tk.Label(window, text="Лог действий будет здесь", anchor="w", bg="#f0f4fc", fg="#276fbf",
+                         font=custom_font)
     log_label.pack(side="bottom", fill="x", padx=10, pady=10)
 
     # Кнопка для проведения нового анализа (изначально скрыта)
@@ -1704,9 +1687,12 @@ def create_main_window():
     restart_button.pack_forget()
 
     # Кнопка выхода (с красным цветом для выхода)
-    exit_button = tk.Button(window, text="Выход", command=exit_program, bg="#ff5f56", fg="white", font=custom_font, activebackground="#e63946", relief="flat", bd=0)
+    exit_button = tk.Button(window, text="Выход", command=exit_program, bg="#ff5f56", fg="white", font=custom_font,
+                            activebackground="#e63946", relief="flat", bd=0)
     exit_button.pack(side="right", padx=10, pady=10)
 
     window.mainloop()
+
+
 # Запуск приложения
 create_main_window()

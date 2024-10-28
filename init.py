@@ -3,8 +3,8 @@ import os
 import logging
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QLabel,
                              QFileDialog, QLineEdit, QTextEdit, QMessageBox)
-from PyQt5.QtGui import QIcon, QPalette, QColor, QFontDatabase, QFont
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtGui import QIcon, QPalette, QColor, QFontDatabase, QFont, QDoubleValidator
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QLocale
 import pandas as pd
 from test_manager import TestManager
 import matplotlib
@@ -37,17 +37,19 @@ class TestRunnerThread(QThread):
     finished_signal = pyqtSignal()
     result_signal = pyqtSignal(object)
 
-    def __init__(self, df1, df2, output_folder, company_name):
+    def __init__(self, df1, df2, output_folder, company_name, P_A):
         super().__init__()
         self.df1 = df1
         self.df2 = df2
         self.output_folder = output_folder
         self.company_name = company_name
+        self.P_A = P_A
+
 
     def run(self):
         try:
             logging.info(f"Запуск тестов для компании: {self.company_name}")
-            manager = TestManager(self.df1, self.df2, self.output_folder, self.company_name, self.log)
+            manager = TestManager(self.df1, self.df2, self.output_folder, self.company_name, self.log, self.P_A)
             manager.run_tests()
         except Exception as e:
             self.log(f"Ошибка при выполнении тестов: {str(e)}", 'error')
@@ -104,6 +106,21 @@ class TestApp(QWidget):
         self.style_input(self.company_input)  # Применение стиля
         layout.addWidget(self.company_input)
 
+        # Параметр для оценки рисков
+        self.label_P_A = QLabel('Вероятность мошенничества:')
+        layout.addWidget(self.label_P_A)
+        # Настройка текстового поля с валидатором только для значений float
+        self.P_A_input = QLineEdit(self)
+        float_validator = QDoubleValidator(0.00, 99.99, 2)  # Диапазон от 0.00 до 99.99 с 2 знаками после точки
+        float_validator.setNotation(
+            QDoubleValidator.StandardNotation)  # Только стандартный вид записи (например, без экспоненты)
+        float_validator.setLocale(QLocale("en_US"))  # Устанавливаем локаль для точки вместо запятой
+        self.P_A_input.setValidator(float_validator)
+        # Подключение проверки при изменении текста
+        self.P_A_input.textChanged.connect(self.check_files_and_name)
+        self.style_input(self.P_A_input)  # Применение стиля
+        layout.addWidget(self.P_A_input)
+
         # Кнопка загрузки файла 1
         self.load_file1_btn = QPushButton('Загрузить файл 1')
         self.load_file1_btn.clicked.connect(self.load_file_1)
@@ -146,6 +163,7 @@ class TestApp(QWidget):
                 padding: 12px;
                 font-size: 16px;
                 font-weight: bold;
+                outline: none;
             }
             QPushButton:hover {
                 background-color: #C6D9EE;  /* Легкий эффект при наведении */
@@ -181,8 +199,9 @@ class TestApp(QWidget):
 
     def load_file_1(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите файл 1", "", "Excel Files (*.xlsx);;All Files (*)")
+        file_name = os.path.splitext(os.path.basename(file_path))[0]
         if file_path:
-            self.update_log(f"Загрузка файла 1...", 'info')
+            self.update_log(f"Загрузка {file_name}...", 'info')
             self.thread1 = FileLoaderThread(file_path, "файл 1")
             self.thread1.finished_signal.connect(self.on_file_loaded)
             self.thread1.error_signal.connect(self.on_file_error)
@@ -190,8 +209,9 @@ class TestApp(QWidget):
 
     def load_file_2(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите файл 2", "", "Excel Files (*.xlsx);;All Files (*)")
+        file_name = os.path.splitext(os.path.basename(file_path))[0]
         if file_path:
-            self.update_log(f"Загрузка файла 2...", 'info')
+            self.update_log(f"Загрузка файла {file_name}...", 'info')
             self.thread2 = FileLoaderThread(file_path, "файл 2")
             self.thread2.finished_signal.connect(self.on_file_loaded)
             self.thread2.error_signal.connect(self.on_file_error)
@@ -201,10 +221,10 @@ class TestApp(QWidget):
         if file_type == "файл 1":
             self.df1 = df
             self.load_file2_btn.setEnabled(True)
-            self.update_log(f"Файл 1 успешно загружен.", 'info')
+            self.update_log(f"Файл успешно загружен.", 'info')
         elif file_type == "файл 2":
             self.df2 = df
-            self.update_log(f"Файл 2 успешно загружен.", 'info')
+            self.update_log(f"Файл успешно загружен.", 'info')
         self.check_files_and_name()
 
     def on_file_error(self, message):
@@ -218,6 +238,16 @@ class TestApp(QWidget):
             self.run_tests_btn.setEnabled(False)
 
     def run_tests(self):
+
+        text = self.P_A_input.text()
+        if ',' in text:
+            self.P_A_input.setText(text.replace(',', '.'))
+        P_A = float(self.P_A_input.text())
+
+        if not P_A:
+            self.update_log('Пожалуйста, введите показатель мошенничества.', 'warning')
+            return
+
         company_name = self.company_input.text()
         if not company_name:
             self.update_log('Пожалуйста, введите название компании.', 'warning')
@@ -229,7 +259,7 @@ class TestApp(QWidget):
             return
 
         self.update_log('Запуск тестов...', 'info')
-        self.thread = TestRunnerThread(self.df1, self.df2, output_folder, company_name)
+        self.thread = TestRunnerThread(self.df1, self.df2, output_folder, company_name, P_A)
         self.thread.log_signal.connect(self.update_log)
         self.thread.finished_signal.connect(self.on_tests_finished)
         self.thread.start()

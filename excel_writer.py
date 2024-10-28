@@ -6,6 +6,7 @@ from openpyxl.drawing.image import Image
 import pandas as pd
 from datetime import datetime
 
+
 class ExcelWriter:
 
     def __init__(self, output_folder, company_name, filename=None):
@@ -46,9 +47,18 @@ class ExcelWriter:
             if not sheet.max_row > 1:  # Проверка, пуст ли лист
                 self.book.remove(sheet)
 
+    def clean_dataframe(self, df):
+        """
+        Очищает DataFrame от NaN и приводит все значения к строковому типу для корректной записи в Excel.
+
+        :param df: DataFrame для очистки
+        :return: Очищенный DataFrame
+        """
+        return df.fillna('').astype(str)
+
     def save_data_to_excel(self, df, sheet_name):
         """
-        Добавляет данные на новый лист в Excel.
+        Добавляет данные на новый лист в Excel, если df не пустой и не None.
 
         :param df: DataFrame с результатом теста
         :param sheet_name: Название листа для записи данных
@@ -56,6 +66,10 @@ class ExcelWriter:
         # Удаление дефолтного листа, если он есть
         self.remove_default_sheet()
 
+        # Очистка DataFrame от NaN и приведение к строковому типу
+        df = self.clean_dataframe(df)
+
+        # Создание листа
         if sheet_name not in self.book.sheetnames:
             sheet = self.book.create_sheet(sheet_name)
         else:
@@ -84,43 +98,63 @@ class ExcelWriter:
         if chart_paths and not isinstance(chart_paths, list):
             chart_paths = [chart_paths]
 
-        # Сохраняем данные на лист
-        self.save_data_to_excel(df, sheet_name)
+        # Сохраняем данные на лист, если DataFrame не пустой или не None
+        if df is not None and not df.empty:
+            self.save_data_to_excel(df, sheet_name)
+        else:
+            print(f"DataFrame пустой или None. Данные на лист '{sheet_name}' не записаны.")
 
         # Если предоставлены пути к графикам, добавляем их
         if chart_paths:
             self.add_charts(chart_paths, sheet_name)
 
-    def add_charts(self, chart_paths, sheet_name, position=None):
+    def add_charts(self, chart_paths, sheet_name, start_col=5, images_per_row=2, x_scale=0.4, y_scale=0.4,
+                   row_offset=25, col_offset=10):
         """
-        Добавляет график или несколько графиков на лист Excel.
+        Добавляет график или несколько графиков на лист Excel, начиная с последней строки с данными.
 
         :param chart_paths: Список путей к графикам
-        :param sheet_name: Лист, на который нужно вставить график
-        :param position: Позиция графика на листе (по умолчанию смещено на 5 ячеек вправо от последнего столбца)
+        :param sheet_name: Лист, на который нужно вставить графики
+        :param start_col: Начальный столбец для вставки изображений
+        :param images_per_row: Количество графиков в одном ряду
+        :param x_scale: Масштаб изображения по горизонтали
+        :param y_scale: Масштаб изображения по вертикали
+        :param row_offset: Отступ между рядами изображений
+        :param col_offset: Отступ между изображениями в одном ряду
         """
-        sheet = self.book[sheet_name]
-        index = 5  # Начнем с 5-й строки для добавления изображений
+        # Проверяем наличие листа
+        if sheet_name not in self.book.sheetnames:
+            sheet = self.book.create_sheet(sheet_name)
+        else:
+            sheet = self.book[sheet_name]
 
-        for chart_path in chart_paths:
+        # Определяем последнюю заполненную строку
+        max_row = sheet.max_row + 1  # Начинаем с новой строки после данных
+        current_row = max_row  # Устанавливаем начальную строку для графиков
+        current_col = start_col
+
+        for idx, chart_path in enumerate(chart_paths):
             if os.path.exists(chart_path):
                 img = Image(chart_path)
+                img.width *= x_scale  # Масштабируем ширину изображения
+                img.height *= y_scale  # Масштабируем высоту изображения
 
-                # Уменьшение размера изображения до половины
-                img.width //= 2.5
-                img.height //= 2.5
-
-                # Если позиция не указана, смещаем на 5 ячеек вправо от последнего столбца
-                if not position:
-                    max_column = sheet.max_column
-                    image_column = max_column + 5  # Смещаем на 5 столбцов вправо
-                    position = f'{chr(65 + image_column)}{index}'  # Начинаем с 5-й строки и двигаемся вниз
+                col_letter = chr(64 + current_col)  # Преобразование номера столбца в букву
+                position = f"{col_letter}{current_row}"
 
                 sheet.add_image(img, position)
-                index += 15  # Сместимся вниз на 15 строк для следующего графика
-                self.save()
+
+                # Смещение позиции для следующего изображения
+                if (idx + 1) % images_per_row == 0:
+                    current_row += row_offset  # Переход на новую строку
+                    current_col = start_col  # Сброс к начальному столбцу
+                else:
+                    current_col += col_offset  # Смещение вправо для следующего изображения в строке
+
             else:
                 print(f"Файл изображения '{chart_path}' не найден.")
+
+        self.save()
 
     def delete_png_files(self):
         """Удаляет все .png файлы в директории, где находится исполняемый файл."""
@@ -133,3 +167,8 @@ class ExcelWriter:
         """ Сохраняет книгу на диск. """
         self.book.save(self.file_path)
         print(f'Файл сохранен: {self.file_path}')
+
+    def close_workbook(self):
+        """Закрытие книги Excel после сохранения."""
+        self.book.close()
+        print("Книга Excel закрыта.")
