@@ -79,7 +79,7 @@ class TestApp(QWidget):
             icon_path = os.path.join(os.getcwd(), 'resources', 'fraud.ico')
 
         self.setWindowIcon(QIcon(icon_path))
-        self.setWindowTitle('Тестирование данных')
+        self.setWindowTitle('FraudFinder')
         self.setGeometry(100, 100, 800, 600)
 
         # Установка шрифта "Jury"
@@ -92,7 +92,7 @@ class TestApp(QWidget):
         layout = QVBoxLayout()
 
         # Заголовок
-        self.label_header = QLabel('Тестирование данных')
+        self.label_header = QLabel('FraudFinder')
         self.label_header.setStyleSheet("""
             QLabel {
                 font-size: 22px;

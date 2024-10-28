@@ -4,7 +4,6 @@ from openpyxl.workbook import Workbook
 from tests import Tests
 from excel_writer import ExcelWriter
 import matplotlib
-from ClusteringAnalyzer import ClusteringAnalyzer
 import warnings
 from openpyxl.drawing.image import Image
 from openpyxl import load_workbook
