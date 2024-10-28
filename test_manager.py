@@ -356,7 +356,7 @@ class TestManager:
         print(f'sample size = {sample_size}')
 
         # Подсчёт silhouette_score для каждого количества кластеров
-        for i in tqdm(x):
+        for i in x:
             labels = KMeans(n_clusters=i, random_state=1000).fit(scaled_df).labels_
             m.append(metrics.silhouette_score(scaled_df, labels, sample_size=sample_size))
 
@@ -887,7 +887,7 @@ class TestManager:
 
         sample_size = int(scaled_class_1.shape[0])
         print(f'sample size = {sample_size}')
-        for i in tqdm(x):
+        for i in x:
             print(i)
             labels = KMeans(n_clusters=i, random_state=1000).fit(scaled_class_1).labels_
             print(labels)

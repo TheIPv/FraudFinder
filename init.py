@@ -73,13 +73,18 @@ class TestApp(QWidget):
         palette.setColor(QPalette.Base, QColor('#ffffff'))
         self.setPalette(palette)
 
-        self.setWindowIcon(QIcon(os.path.join(os.getcwd(), 'resources/fraud.ico')))
+        if hasattr(sys, '_MEIPASS'):
+            icon_path = os.path.join(sys._MEIPASS, 'resources', 'fraud.ico')
+        else:
+            icon_path = os.path.join(os.getcwd(), 'resources', 'fraud.ico')
+
+        self.setWindowIcon(QIcon(icon_path))
         self.setWindowTitle('Тестирование данных')
         self.setGeometry(100, 100, 800, 600)
 
         # Установка шрифта "Jury"
         font_db = QFontDatabase()
-        font_id = font_db.addApplicationFont("/path/to/Jury.ttf")  # Путь к файлу шрифта
+        font_id = font_db.addApplicationFont("resources\\Jura.ttf")  # Путь к файлу шрифта
         if font_id != -1:
             font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
             self.setFont(QFont(font_family))
@@ -287,7 +292,7 @@ class TestApp(QWidget):
 app = QApplication(sys.argv)
 
 font_db = QFontDatabase()
-font_id = font_db.addApplicationFont("resources/Jura.ttf")
+font_id = font_db.addApplicationFont("resources\\Jura.ttf")
 if font_id != -1:
     font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
     app.setFont(QFont(font_family, 10))
