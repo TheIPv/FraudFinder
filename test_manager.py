@@ -1305,46 +1305,6 @@ class TestManager:
         df_results = self.tests.calculate_coef_distortion()
         self.excel_writer.save_data_to_excel(df_results, 'Тест 2.9')
 
-        # self.log("Запуск вычисления силуэта")
-        # df_results, image_path = self.clustering_analyzer.calculate_digit_stats()
-        # self.excel_writer.save_data_with_charts(df_results, 'Силуэт', image_path)
-        #
-        # self.log("Запуск вычисления статистик")
-        # df_results, image_path = self.clustering_analyzer.calculate_statistics()
-        # self.excel_writer.save_data_with_charts(df_results, 'Статистики', image_path)
-        #
-        # self.log("Построение главных компонент...")
-        # df_results, image_path = self.clustering_analyzer.calculate_principal_components()
-        # self.excel_writer.save_data_with_charts(df_results, 'Метод ГК', image_path)
-        #
-        # self.log("Поиск аномального класса по Isolation Forest..")
-        # df_results = self.clustering_analyzer.calculate_anomaly_class()
-        # self.excel_writer.save_data_with_charts(df_results, 'Аномальный класс (этап 1)')
-        #
-        # self.log("Построение графиков")
-        # df_results, image_paths = self.clustering_analyzer.create_graphics()
-        # self.excel_writer.save_data_with_charts(df_results, 'Графики', image_paths)
-        #
-        # self.log("Поиск подозрительных операций")
-        # df_results = self.clustering_analyzer.search_suspicious_transactions_1()
-        # self.excel_writer.save_data_with_charts(df_results, 'Подозрительные операции 2')
-        #
-        # self.log("Расчет силуэта (этап 2)")
-        # df_results, image_path = self.clustering_analyzer.calculate_digit_stats_2()
-        # self.excel_writer.save_data_with_charts(df_results, 'Силуэт (этап 2)', image_path)
-        #
-        # self.log("Кластеризация (этап 2)")
-        # df_results, image_path = self.clustering_analyzer.calculate_clasterization_2()
-        # self.excel_writer.save_data_with_charts(df_results, 'Кластеризация (этап 2)', image_path)
-        #
-        # self.log("Поиск аномального класса (этап 2)")
-        # df_results = self.clustering_analyzer.search_anomaly_classes()
-        # self.excel_writer.save_data_with_charts(df_results, 'Аномальный класс (этап 2)')
-        #
-        # self.log("Вывод подозрительных операций (этап 2)")
-        # df_results = self.clustering_analyzer.search_suspicious_transactions_2()
-        # self.excel_writer.save_data_with_charts (df_results, 'Подозрительные операции 2')
-
         self.analyze_data()
 
         self.excel_writer.delete_png_files()
