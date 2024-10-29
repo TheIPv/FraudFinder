@@ -30,7 +30,6 @@ class TestManager:
         self.OSV = df2.round(decimals=2).set_index('Счет')
         self.tests = Tests(self.df, self.OSV)
         self.excel_writer = ExcelWriter(output_folder, company_name)
-        self.clustering_analyzer = ClusteringAnalyzer(self.df)
         self.log_callback = log_callback if log_callback else print  # Используем коллбек для логов или print по умолчанию
         self.filename = None
         self.output_folder = output_folder
